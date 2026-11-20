@@ -74,6 +74,20 @@ def test_from_a_group_only_what_faces_up(scene):
         == pytest.approx(130.0)
 
 
+def test_selection_face_count_does_not_triangulate(scene, monkeypatch):
+    from core.group import Group
+    from core.mesh import Mesh
+    m = Mesh()
+    m.add_face([QVector3D(*p) for p in [(0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0)]])
+    m.add_face([QVector3D(*p) for p in [(0, 0, 0), (0, 0, 3), (10, 0, 3), (10, 0, 0)]])
+    g = Group(m)
+    f = _square(scene)
+    monkeypatch.setattr(motor, "surface_from_selection",
+                        lambda *a, **k: pytest.fail("must only count"))
+    assert motor.selection_face_count([g, f]) == 3
+    assert motor.selection_face_count([]) == 0
+
+
 def test_points_stay_on_the_surface_and_apart(scene):
     tris = motor.surface_from_selection([_square(scene, 30.0)])
     pts, wanted = motor.scatter_points(tris, _params(count=80, min_distance=2.0, seed=4))

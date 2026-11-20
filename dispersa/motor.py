@@ -188,6 +188,28 @@ def _normal(t):
     return None if n < 1e-12 else (x / n, y / n, z / n)
 
 
+#: Above this many faces the panel does not measure the selection as you
+#: select it: ``surface_from_selection`` triangulates every face in Python
+#: (about 20 µs each), so a 600 000-face group froze IngeTrazo for 20 s on
+#: every selection change. Past it, the surface is measured when the button
+#: is pressed.
+BIG_SELECTION = 20_000
+
+
+def selection_face_count(selection) -> int:
+    """How many faces ``surface_from_selection`` would look at: counted from
+    the shared meshes (milliseconds), without touching a face."""
+    from core.group import Group, iter_placements
+    from core.mesh import Face
+    n = 0
+    for ent in selection:
+        if isinstance(ent, Face):
+            n += 1
+        elif isinstance(ent, Group) and not is_scatter(ent):
+            n += sum(len(g.mesh.faces) for g, _m in iter_placements(ent))
+    return n
+
+
 def surface_area(tris) -> float:
     return sum(_area(t) for t in tris)
 

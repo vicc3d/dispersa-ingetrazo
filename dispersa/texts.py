@@ -21,6 +21,10 @@ _TEXTS = {
         "Select faces or a group in the model.":
             "Selecciona caras o un grupo en el modelo.",
         "Selection: {a} m² ({n} triangles)": "Selección: {a} m² ({n} triángulos)",
+        "Selection: {n} faces. The surface is measured when you scatter.":
+            "Selección: {n} caras. La superficie se mide al dispersar.",
+        "The selection has no faces facing up.":
+            "La selección no tiene caras mirando hacia arriba.",
         "The scatter's surface: {a} m² ({n} triangles)": "Superficie de la dispersión: {a} m² ({n} triángulos)",
         "On the terrain": "Sobre el terreno",
         "Drop every copy onto the 3D terrain of the Terrain tab, inside the selected area":
@@ -161,6 +165,10 @@ _TEXTS = {
         "Select faces or a group in the model.":
             "Selecione faces ou um grupo no modelo.",
         "Selection: {a} m² ({n} triangles)": "Seleção: {a} m² ({n} triângulos)",
+        "Selection: {n} faces. The surface is measured when you scatter.":
+            "Seleção: {n} faces. A superfície é medida ao dispersar.",
+        "The selection has no faces facing up.":
+            "A seleção não tem faces voltadas para cima.",
         "The scatter's surface: {a} m² ({n} triangles)": "Superfície da dispersão: {a} m² ({n} triângulos)",
         "On the terrain": "Sobre o terreno",
         "Drop every copy onto the 3D terrain of the Terrain tab, inside the selected area":

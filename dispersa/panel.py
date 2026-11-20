@@ -185,6 +185,8 @@ class ScatterPanel(QWidget):
         self._busy = False               # scattering: the button waits
         self._sel_key = None
         self._tris = []
+        self._pending = None             # a big selection, measured on the button
+        self._stale = False              # the model changed while hidden
         self.tiles = []
         self.setStyleSheet(_STYLE)
         outer = QVBoxLayout(self)
@@ -601,19 +603,49 @@ class ScatterPanel(QWidget):
             self._editing = None
         if self._last is not None and self._last not in self.app.scene.groups:
             self._last = None
+        if not self.isVisible():
+            # IngeTrazo calls this on every edit and selection. Measuring the
+            # selection is the slow part, and nobody is looking at the
+            # numbers: do it when the tab comes to the front.
+            self._stale = True
+            return
+        self._stale = False
         self.fill_objects()
-        self._refresh_selection(True)
+        self._refresh_selection()
+
+    def showEvent(self, ev) -> None:  # noqa: N802
+        super().showEvent(ev)
+        if self._stale and hasattr(self, "go"):
+            self._stale = False
+            self.fill_objects()
+            self._refresh_selection()
 
     def _refresh_selection(self, force=False) -> None:
         sel = list(self.app.scene.selection)
-        key = (len(sel), tuple(sorted(id(e) for e in sel[:200])))
+        # The model's version too: the same group edited is a new surface.
+        key = (len(sel), tuple(sorted(id(e) for e in sel[:200])),
+               getattr(self.app.scene, "content_version", None))
         if key == self._sel_key and not force:
             return
         self._sel_key = key
         scatters = [g for g in sel if motor.is_scatter(g)]
         if len(sel) == 1 and scatters:
+            self._pending = None
             self.edit(scatters[0])
             return
+        faces = motor.selection_face_count(sel)
+        if faces > motor.BIG_SELECTION:
+            # Too many faces to triangulate at every click: say so, and
+            # measure when the button is pressed (see run()).
+            self._tris = []
+            self._pending = sel
+            self._editing = None
+            self.where_big.setText("…")
+            self.where.setText(tr("Selection: {n} faces. The surface is "
+                                  "measured when you scatter.", n=f"{faces:,}"))
+            self._show_mode()
+            return
+        self._pending = None
         self._tris = motor.surface_from_selection(sel, self.max_slope.value())
         if self._tris:
             self._editing = None
@@ -671,7 +703,8 @@ class ScatterPanel(QWidget):
         else:
             self.editing.setText("")
             self.go.setText(tr("Scatter on the selection"))
-            self.go.setEnabled(bool(self._tris) and not self._busy)
+            self.go.setEnabled(bool(self._tris or self._pending)
+                               and not self._busy)
             self.brush_note.setText(tr("The brush starts a new scatter."))
         target = self._zone_target()
         if target is None:
@@ -697,6 +730,19 @@ class ScatterPanel(QWidget):
             self.status.setText(tr("Choose at least one object to scatter."))
             return
         old = self._editing
+        if old is None and self._pending is not None:
+            # A big selection: its surface is measured now, once.
+            from PySide6.QtCore import Qt
+            from PySide6.QtWidgets import QApplication
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                self._tris = motor.surface_from_selection(
+                    self._pending, self.max_slope.value())
+            finally:
+                QApplication.restoreOverrideCursor()
+            if not self._tris:
+                self.status.setText(tr("The selection has no faces facing up."))
+                return
         tris = None if old is not None else list(self._tris)
         self._apply(old, lambda scene, terrain: motor.prepare(
             scene, params, tris=tris, old=old, terrain=terrain))
